@@ -19,6 +19,10 @@ import pdb
 if sys.version_info[0] < 3:
     raise Exception("You must use Python 3 or higher. Recommended version is Python 3.7")
 
+
+
+from eyes.demo import Eye_Checker
+
 def load_checkpoints(config_path, checkpoint_path, cpu=False):
 
     with open(config_path) as f:
@@ -109,8 +113,12 @@ def find_best_frame(source, driving, cpu=False):
 
 
 
-def find_n_best_frames(source, driving, n=1, cpu=False, mouth=False):
+def find_n_best_frames(source, driving, n=1, cpu=False, mouth=0):
     import face_alignment
+
+
+    eye_checker = Eye_Checker(r'eyes\data\model_weights.pkl')
+
     
     def normalize_kp(kp):
         kp = kp - kp.mean(axis=0, keepdims=True)
@@ -127,14 +135,29 @@ def find_n_best_frames(source, driving, n=1, cpu=False, mouth=False):
     frame_nums = []
     for i, image in tqdm(enumerate(driving)):
 
-        if check_eye(image) > 0.5:
-            if mouth == True:
-                if check_mouth(image) > 0.79: #THRESHOLD
+        if eye_checker.check_eye(image) > 0.5:
+            if mouth != 0:
+                mouth_status = eye_checker.check_mouth(image)
+                if mouth_status is None:
+                    continue
+
+                elif mouth_status>= 0.79 and mouth==1: #THRESHOLD
                     kp_driving = fa.get_landmarks(255 * image)[0]
                     kp_driving = normalize_kp(kp_driving)
                     new_norm = (np.abs(kp_source - kp_driving) ** 2).sum()
                     norms.append(new_norm)
                     frame_nums.append(i)
+                
+
+                elif mouth_status< 0.79 and mouth==2: #THRESHOLD
+                    kp_driving = fa.get_landmarks(255 * image)[0]
+                    kp_driving = normalize_kp(kp_driving)
+                    new_norm = (np.abs(kp_source - kp_driving) ** 2).sum()
+                    norms.append(new_norm)
+                    frame_nums.append(i)
+
+
+
             else:
                 kp_driving = fa.get_landmarks(255 * image)[0]
                 kp_driving = normalize_kp(kp_driving)
@@ -152,21 +175,7 @@ def find_n_best_frames(source, driving, n=1, cpu=False, mouth=False):
 
 
 
-# def check_eye(driving_frame):
-#     '''
-#     return confidence of opened eyes on frame
-#     '''
-#     ...
-#     return 0.5
 
-def check_mouth(driving_frame):
-    '''
-    return confidence of opened mouth on frame
-    '''
-    ...
-    
-    
-    return 0.5
 
 
 
@@ -200,7 +209,7 @@ if __name__ == "__main__":
                         help="n bests frames to start (only for print)")
     
     parser.add_argument("--open_mouth", dest="open_mouth", type=int, default=0, 
-                        help="1 if open mouth observing required, else 0 (default 0)")
+                        help="1 if opened mouth observing required, 2 if closed mouth observing required, else 0 (default 0)")
 
     parser.add_argument("--n", dest="n", type=int, default=1, 
                         help="number of best frames (default 1)")
