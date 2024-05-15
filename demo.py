@@ -21,7 +21,7 @@ if sys.version_info[0] < 3:
 
 
 
-from eyes.demo import Eye_Checker
+from eyes.eyes_and_mouth_checker import Eye_Checker
 
 def load_checkpoints(config_path, checkpoint_path, cpu=False):
 

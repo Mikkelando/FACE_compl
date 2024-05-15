@@ -178,25 +178,22 @@ class Eye_Checker:
             score = F.sigmoid(output).item()
             print('SCORE: ', score)
 
-            coloridx = min(int(round(score*10)),9)
-            draw = ImageDraw.Draw(frame)
-            self.drawrect(draw, [(b[0], b[1]), (b[2], b[3])], outline=self.colors[coloridx].hex, width=5)
-            draw.text((b[0],b[3]), str(round(score,2)), fill=(255,255,255,128), font=self.font)
+            # coloridx = min(int(round(score*10)),9)
+            # draw = ImageDraw.Draw(frame)
+            # self.drawrect(draw, [(b[0], b[1]), (b[2], b[3])], outline=self.colors[coloridx].hex, width=5)
+            # draw.text((b[0],b[3]), str(round(score,2)), fill=(255,255,255,128), font=self.font)
             # if save_text:
             #     f.write("%d,%f\n"%(frame_cnt,score))
 
         # if not display_off:
-            frame = np.asarray(frame) # convert PIL image back to opencv format for faster display
-            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            while True:
-                cv2.imshow('',frame)
+            # frame = np.asarray(frame) # convert PIL image back to opencv format for faster display
+            # frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            # while True:
+            #     cv2.imshow('',frame)
             
             # if vis:
             #     outvid.write(frame)
-                key = cv2.waitKey(1) & 0xFF
-                if key == ord('q'):
-                        break
-        
+                # key = cv2.waitKey(/
 
         # if vis:
         #     outvid.release()
