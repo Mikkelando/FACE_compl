@@ -221,7 +221,43 @@ class FaceLandmarkerLogger:
         return mar
             
 
+    def kp(self, image, frame_time_nano=0):
+        height, width, _ = image.shape
+        image = mp.Image(image_format=mp.ImageFormat.SRGB, data=image)
+
+        detection_result = (
+            self._detector.detect_for_video(image, int(frame_time_nano / 1e6))
+            if self._video_mode
+            else self._detector.detect(image)
+        )
+
+       
+        for i, (landmark, blendshapes) in enumerate(
+                zip(detection_result.face_landmarks, detection_result.face_blendshapes)
+        ):
+            if len(landmark) == 0 or len(blendshapes) == 0:
+                continue
+
+            # MediaPipe's keypoints are normalized to [0, 1], so we need to scale them to get pixel coordinates.
+            pts = [(math.floor(lm.x * width), math.floor(lm.y * height)) for lm in landmark]
+            keypoint_ids = list(range(len(landmark)))
+            # index, score = detection_result.detections[0].categories[0].index, detection_result.detections[0].categories[0].score
+
+
+     
+            xs = [
+                pts[i][0] for i in self.landmark_points_68
+            ]
+            ys = [
+                pts[i][1] for i in self.landmark_points_68
+            ]
+            kp = np.array([(xs[i], ys[i]) for i in range(len(xs))])
             
+
+            
+            return kp
+
+        return None
 
 def download_file(url, path):
     path.parent.mkdir(parents=True, exist_ok=True)

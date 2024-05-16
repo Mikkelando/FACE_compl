@@ -69,6 +69,15 @@ class Eye_Checker:
         drawcontext.line(points, fill=outline, width=width)
 
 
+
+
+    def get_kp(self, frame, frame_time=0):
+        kp = self.mouth_logger.kp(frame, frame_time_nano=frame_time)
+        if kp is None:
+            return None
+        else:
+            return kp
+
     def check_eye(self, frame):
         # set up vis settings
         
