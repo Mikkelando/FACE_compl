@@ -34,8 +34,8 @@ def find_n_best_frames(source, driving, n=1, cpu=False, mouth=0):
     norms = []
     frame_nums = []
     for i, image in tqdm(enumerate(driving)):
-
-        if eye_checker.check_eye(image) > 0.5:
+        eye_score = eye_checker.check_eye(image)
+        if eye_score > 0.5:
             if mouth != 0:
                 mouth_status = eye_checker.check_mouth(image)
                 if mouth_status is None:
@@ -47,6 +47,7 @@ def find_n_best_frames(source, driving, n=1, cpu=False, mouth=0):
                     new_norm = (np.abs(kp_source - kp_driving) ** 2).sum()
                     norms.append(new_norm)
                     frame_nums.append(i)
+                    print(f'EYE SCORE:  {eye_score}\t MOUTH SCORE:  {mouth_status}')
                 
 
                 elif mouth_status< 0.79 and mouth==2: #THRESHOLD
@@ -55,6 +56,7 @@ def find_n_best_frames(source, driving, n=1, cpu=False, mouth=0):
                     new_norm = (np.abs(kp_source - kp_driving) ** 2).sum()
                     norms.append(new_norm)
                     frame_nums.append(i)
+                    print(f'EYE SCORE:  {eye_score}\t MOUTH SCORE:  {mouth_status}')
 
 
 
@@ -64,6 +66,7 @@ def find_n_best_frames(source, driving, n=1, cpu=False, mouth=0):
                 new_norm = (np.abs(kp_source - kp_driving) ** 2).sum()
                 norms.append(new_norm)
                 frame_nums.append(i)
+                print(f'EYE SCORE:  {eye_score}')
             
     if len(frame_nums) == 0:
         return None
@@ -72,6 +75,49 @@ def find_n_best_frames(source, driving, n=1, cpu=False, mouth=0):
     
     # Возвращаем список n лучших кадров
     return sorted_frames[:n]
+
+
+
+def resize_image(image_path, target_size=(256, 256)):
+# Загрузка изображения
+    image = cv2.imread(image_path)
+    
+    # Изменение размера изображения
+    resized_image = cv2.resize(image, target_size)
+    
+    # Преобразование изображения в формат numpy array
+    image_array = np.array(resized_image)
+    
+    return image_array
+
+
+
+
+
+
+def process_video(video_path, target_size=(256, 256)):
+    # Загрузка видео
+    cap = cv2.VideoCapture(video_path)
+    frames = []
+    
+    # Чтение и обработка каждого кадра
+    while(cap.isOpened()):
+        ret, frame = cap.read()
+        if not ret:
+            break
+        
+        # Изменение размера кадра
+        resized_frame = cv2.resize(frame, target_size)
+        
+        # Преобразование кадра в формат numpy array и добавление в список
+        frames.append(np.array(resized_frame))
+        
+    cap.release()
+    
+    return frames
+
+
+
 
 if __name__ == "__main__":
     parser = ArgumentParser()
@@ -101,20 +147,22 @@ if __name__ == "__main__":
 
     
     print('reading image...')
-    source_image_sk = imageio.imread(opt.source_image)
-    source_img = cv2.imread(opt.source_image)
+    # source_image_sk = imageio.imread(opt.source_image)
+    # source_img = cv2.imread(opt.source_image)
     
     
     print('resizing...')
-    source_image_sk = np.array(resize(source_image_sk, (256, 256))[..., :3])
-    source_image_sk = (source_image_sk * 255).astype(np.uint8)
-    print('SHAPEEE source_image_sk :',source_image_sk.shape)
-    print('SHAPEEE source_image_sk[0] :', source_image_sk[0].shape)
+    # source_image_sk = np.array(resize(source_image_sk, (256, 256))[..., :3])
+    # source_image_sk = (source_image_sk * 255).astype(np.uint8)
+    # print('SHAPEEE source_image_sk :',source_image_sk.shape)
+    # print('SHAPEEE source_image_sk[0] :', source_image_sk[0].shape)
 
-    plt.imshow(source_image_sk[0:256, 0:256, 0])
-    plt.show()
+    source_image_cv2 = resize_image(opt.source_image)
+    print(source_image_cv2.shape)
+    # plt.imshow(source_image_cv2[0:256, 0:256, 0])
+    # plt.show()
 
-    print(source_image_sk[0:256, 0:256, 0])
+    # print(source_image_sk[0:256, 0:256, 0])
     # resized_frame = np.uint16(cv2.resize(source_img, (256, 256)))
     # print(source_img.shape)
     # print(source_image.shape)
@@ -133,27 +181,39 @@ if __name__ == "__main__":
     # img.save('somepic.png')
 
     # print(np.array(img).shape)
-    source_image = source_image_sk
+
+    # source_image = source_image_sk
+    source_image = source_image_cv2
+
+
 
 
     print('reading video...')
-    reader = imageio.get_reader(opt.driving_video)
-    fps = reader.get_meta_data()['fps']
-    driving_video = []
-    try:
-        for im in reader:
-            driving_video.append(im)
-    except RuntimeError:
-        pass
-    reader.close()
+    # reader = imageio.get_reader(opt.driving_video)
+    # fps = reader.get_meta_data()['fps']
+    # driving_video = []
+    # try:
+    #     for im in reader:
+    #         driving_video.append(im)
+    # except RuntimeError:
+    #     pass
+    # reader.close()
 
-    tmp = []
-    for i, frame in enumerate(driving_video):
-        tmp.append(np.array(resize(frame, (256, 256))[..., :3])) 
-        print(i)
-    # generator, kp_detector = load_checkpoints(config_path=opt.config, checkpoint_path=opt.checkpoint, cpu=opt.cpu)
-    driving_video = tmp
+    # tmp = []
+    # for i, frame in enumerate(driving_video):
+    #     tmp.append(np.array(resize(frame, (256, 256))[..., :3])) 
+    #     print(i)
+    # # generator, kp_detector = load_checkpoints(config_path=opt.config, checkpoint_path=opt.checkpoint, cpu=opt.cpu)
+    # driving_video = tmp
    
+
+
+
+
+
+
+
+    driving_video = process_video(opt.driving_video)
     print('params:')
     print('n: ', int(opt.n))
     print('n: ', opt.open_mouth)

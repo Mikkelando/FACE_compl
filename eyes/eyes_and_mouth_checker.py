@@ -149,7 +149,7 @@ class Eye_Checker:
             return 0
         #### RED: here add mp dets
         # index, box, conf_score = self.eye_logger.detect_and_log(frame)
-        print('  FACE DETECTED')
+        # print('  FACE DETECTED')
 
         l = box.origin_x
         r = box.origin_x + box.width
@@ -185,7 +185,7 @@ class Eye_Checker:
             # if jitter > 0:
             #     output = torch.mean(output, 0)
             score = F.sigmoid(output).item()
-            print('SCORE: ', score)
+            # print('SCORE: ', score)
 
             # coloridx = min(int(round(score*10)),9)
             # draw = ImageDraw.Draw(frame)
@@ -209,7 +209,7 @@ class Eye_Checker:
         # if save_text:
         #     f.close()
         # cap.release()
-        print('DONE!')
+        # print('DONE!')
         return score
 
 

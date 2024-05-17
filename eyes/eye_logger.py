@@ -252,7 +252,7 @@ class FaceLandmarkerLogger:
                 pts[i][1] for i in self.landmark_points_68
             ]
             kp = np.array([(xs[i], ys[i]) for i in range(len(xs))])
-            print('FACE FOUND')
+            # print('FACE FOUND')
             
 
             
