@@ -9,12 +9,12 @@ import torchvision
 from torchvision import datasets, transforms
 import pandas as pd
 import numpy as np
-from model import model_static
+from .model import model_static
 from PIL import Image
 from PIL import ImageDraw
 from PIL import ImageFont
 from colour import Color
-from eye_logger import FaceDetectorLogger, FaceLandmarkerLogger
+from .eye_logger import FaceDetectorLogger, FaceLandmarkerLogger
 
 import imageio.v2 as imageio
 
@@ -136,7 +136,7 @@ class Eye_Checker:
             # ret, frame = cap.read()
         
         height, width, channels = frame.shape
-        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        # frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
         # frame_cnt += 1
         bbox = []
@@ -245,6 +245,8 @@ if __name__ == "__main__":
     frame2 = imageio.imread(image_closed)
     frame3 = imageio.imread(image_opened_m)
     frame4 = imageio.imread(image_cloded_m)
+
+    print(frame1.shape)
 
     eye_checker = Eye_Checker(r'C:\Users\msmkl\PROJECTS_PY\FaceRelator_14_05\eye-contact-cnn\data\model_weights.pkl')
     

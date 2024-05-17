@@ -1,4 +1,5 @@
 from argparse import ArgumentParser
+from matplotlib import pyplot as plt
 import numpy as np
 from tqdm import tqdm
 from scipy.spatial import ConvexHull
@@ -6,15 +7,16 @@ from scipy.spatial import ConvexHull
 from eyes import Eye_Checker
 
 import imageio.v2 as imageio
-
+import cv2
 from skimage.transform import resize
+from PIL import Image
 
 def find_n_best_frames(source, driving, n=1, cpu=False, mouth=0):
     # import face_alignment
 
-
+    print('CREATING eye_checker entity...')
     eye_checker = Eye_Checker(r'eyes\data\model_weights.pkl')
-
+    print('=== eye_checker created ===')
     
     def normalize_kp(kp):
         kp = kp - kp.mean(axis=0, keepdims=True)
@@ -98,8 +100,43 @@ if __name__ == "__main__":
         print('--n parametr must be at least 1')
 
     
+    print('reading image...')
+    source_image_sk = imageio.imread(opt.source_image)
+    source_img = cv2.imread(opt.source_image)
+    
+    
+    print('resizing...')
+    source_image_sk = np.array(resize(source_image_sk, (256, 256))[..., :3])
+    source_image_sk = (source_image_sk * 255).astype(np.uint8)
+    print('SHAPEEE source_image_sk :',source_image_sk.shape)
+    print('SHAPEEE source_image_sk[0] :', source_image_sk[0].shape)
 
-    source_image = imageio.imread(opt.source_image)
+    plt.imshow(source_image_sk[0:256, 0:256, 0])
+    plt.show()
+
+    print(source_image_sk[0:256, 0:256, 0])
+    # resized_frame = np.uint16(cv2.resize(source_img, (256, 256)))
+    # print(source_img.shape)
+    # print(source_image.shape)
+    # source_image = source_img
+    # source_image = cv2.cvtColor(source_image, cv2.COLOR_BGR2GRAY)
+    
+    # cv2.imshow('source', source_image)
+
+
+
+    # base_width = 256
+    # img = Image.open(opt.source_image)
+    # wpercent = (base_width / float(img.size[0]))
+    # hsize = int((float(img.size[1]) * float(wpercent)))
+    # img = img.resize((256, 256), Image.Resampling.LANCZOS)
+    # img.save('somepic.png')
+
+    # print(np.array(img).shape)
+    source_image = source_image_sk
+
+
+    print('reading video...')
     reader = imageio.get_reader(opt.driving_video)
     fps = reader.get_meta_data()['fps']
     driving_video = []
@@ -110,11 +147,17 @@ if __name__ == "__main__":
         pass
     reader.close()
 
-    source_image = resize(source_image, (256, 256))[..., :3]
-    driving_video = [resize(frame, (256, 256))[..., :3] for frame in driving_video]
+    tmp = []
+    for i, frame in enumerate(driving_video):
+        tmp.append(np.array(resize(frame, (256, 256))[..., :3])) 
+        print(i)
     # generator, kp_detector = load_checkpoints(config_path=opt.config, checkpoint_path=opt.checkpoint, cpu=opt.cpu)
-
+    driving_video = tmp
    
+    print('params:')
+    print('n: ', int(opt.n))
+    print('n: ', opt.open_mouth)
+    print()
 
     list_of_best_frames = find_n_best_frames(source_image, driving_video, cpu=opt.cpu, n=int(opt.n), mouth = opt.open_mouth)
     if list_of_best_frames is None:
