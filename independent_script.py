@@ -1,15 +1,15 @@
 from argparse import ArgumentParser
-from matplotlib import pyplot as plt
+# from matplotlib import pyplot as plt
 import numpy as np
 from tqdm import tqdm
 from scipy.spatial import ConvexHull
 
 from eyes import Eye_Checker
 
-import imageio.v2 as imageio
+# import imageio.v2 as imageio
 import cv2
-from skimage.transform import resize
-from PIL import Image
+# from skimage.transform import resize
+# from PIL import Image
 
 def find_n_best_frames(source, driving, n=1, cpu=False, mouth=0):
     # import face_alignment
@@ -78,6 +78,164 @@ def find_n_best_frames(source, driving, n=1, cpu=False, mouth=0):
 
 
 
+
+
+
+
+
+def find_n_best_frames_in_source_video(source, driving, n=1, mouth=0):
+    # import face_alignment
+
+    print('CREATING eye_checker entity...')
+    eye_checker = Eye_Checker(r'eyes\data\model_weights.pkl')
+    print('=== eye_checker created ===')
+    
+    def normalize_kp(kp):
+        kp = kp - kp.mean(axis=0, keepdims=True)
+        area = ConvexHull(kp[:, :2]).volume
+        area = np.sqrt(area)
+        kp[:, :2] = kp[:, :2] / area
+        return kp
+
+    # fa = face_alignment.FaceAlignment(face_alignment.LandmarksType._2D, flip_input=True,
+    #                                   device='cpu' if cpu else 'cuda')
+
+    source_kps = []
+    source_scores = []
+    source_candidates = []
+    for i, image in tqdm(enumerate(source)):
+
+        eye_score = eye_checker.check_eye(image)
+        if eye_score > 0.5:
+            if mouth != 0:
+                mouth_status = eye_checker.check_mouth(image)
+                if mouth_status is None:
+                    continue
+
+                elif mouth_status>= 0.79 and mouth==1: #THRESHOLD
+                    # kp_driving = eye_checker.get_kp(image)
+                    # kp_driving = normalize_kp(kp_driving)
+                   
+                    source_candidates.append(i)
+                    source_scores.append([eye_score, mouth_status])
+
+                    kp_source = eye_checker.get_kp(image)
+                    kp_source = normalize_kp(kp_source)
+                    source_kps.append(kp_source)
+
+
+                elif mouth_status< 0.79 and mouth==2: #THRESHOLD
+                    # kp_driving = eye_checker.get_kp(image)
+                    # kp_driving = normalize_kp(kp_driving)
+                   
+                    source_candidates.append(i)
+                    source_scores.append([eye_score, mouth_status])
+                    kp_source = eye_checker.get_kp(image)
+                    kp_source = normalize_kp(kp_source)
+                    source_kps.append(kp_source)
+
+
+
+            else:
+                # kp_driving = eye_checker.get_kp(image)
+                # kp_driving = normalize_kp(kp_driving)
+                
+                source_candidates.append(i)
+                source_scores.append([eye_score])
+                kp_source = eye_checker.get_kp(image)
+                kp_source = normalize_kp(kp_source)
+                source_kps.append(kp_source)
+
+
+
+    driving_kps = []
+    driving_scores = []
+    driving_candidates = []
+    for i, image in tqdm(enumerate(driving)):
+
+        eye_score = eye_checker.check_eye(image)
+        if eye_score > 0.5:
+            if mouth != 0:
+                mouth_status = eye_checker.check_mouth(image)
+                if mouth_status is None:
+                    continue
+
+                elif mouth_status>= 0.79 and mouth==1: #THRESHOLD
+                    # kp_driving = eye_checker.get_kp(image)
+                    # kp_driving = normalize_kp(kp_driving)
+                   
+                    driving_candidates.append(i)
+                    driving_scores.append([eye_score, mouth_status])
+
+                    kp_driving = eye_checker.get_kp(image)
+                    kp_driving = normalize_kp(kp_driving)
+                    driving_kps.append(kp_driving)
+
+
+                elif mouth_status< 0.79 and mouth==2: #THRESHOLD
+                    # kp_driving = eye_checker.get_kp(image)
+                    # kp_driving = normalize_kp(kp_driving)
+                   
+                    driving_candidates.append(i)
+                    driving_scores.append([eye_score, mouth_status])
+
+                    kp_driving = eye_checker.get_kp(image)
+                    kp_driving = normalize_kp(kp_driving)
+                    driving_kps.append(kp_driving)
+
+
+
+            else:
+                # kp_driving = eye_checker.get_kp(image)
+                # kp_driving = normalize_kp(kp_driving)
+                
+                driving_candidates.append(i)
+                driving_scores.append([eye_score])
+
+                kp_driving = eye_checker.get_kp(image)
+                kp_driving = normalize_kp(kp_driving)
+                driving_kps.append(kp_driving)
+
+
+
+
+
+
+
+
+
+    norms = {}
+    
+
+
+
+
+    for i, dr_idx in enumerate(driving_candidates):
+        for j, src_idx in enumerate(source_candidates):
+            new_norm = (np.abs(source_kps[j] - driving_kps[i]) ** 2).sum()
+
+            # if src_idx not in frame_nums:
+            #     norms.append(new_norm)
+            #     frame_nums.append(src_idx)
+            # else:
+
+            norms[src_idx] = new_norm
+
+
+
+
+    # sorted_frames = [x for _, x in sorted(zip(norms, frame_nums))]
+    
+    if len(norms) == 0:
+        return None
+    result = sorted(norms, key=norms.get)
+
+    
+    # Возвращаем список n лучших кадров
+    return result[:n]
+
+
+
 def resize_image(image_path, target_size=(256, 256)):
 # Загрузка изображения
     image = cv2.imread(image_path)
@@ -123,10 +281,11 @@ if __name__ == "__main__":
     parser = ArgumentParser()
     
 
-    parser.add_argument("--source_image", default='sup-mat/source.png', help="path to source image")
-    parser.add_argument("--driving_video", default='sup-mat/source.png', help="path to driving video")
+    # parser.add_argument("--source_image", default='' help="path to source image")
+    parser.add_argument("--source_video", help="path to source video")
+    parser.add_argument("--driving_video", help="path to driving video")
     
-    
+
     
     parser.add_argument("--open_mouth", dest="open_mouth", type=int, default=0, 
                         help="1 if opened mouth observing required, 2 if closed mouth observing required, else 0 - not observing (default 0)")
@@ -136,7 +295,7 @@ if __name__ == "__main__":
 
 
  
-    parser.add_argument("--cpu", dest="cpu", action="store_true", help="cpu mode.")
+    # parser.add_argument("--cpu", dest="cpu", action="store_true", help="cpu mode.")
  
 
 
@@ -146,7 +305,7 @@ if __name__ == "__main__":
         print('--n parametr must be at least 1')
 
     
-    print('reading image...')
+    print('reading source...')
     # source_image_sk = imageio.imread(opt.source_image)
     # source_img = cv2.imread(opt.source_image)
     
@@ -157,8 +316,11 @@ if __name__ == "__main__":
     # print('SHAPEEE source_image_sk :',source_image_sk.shape)
     # print('SHAPEEE source_image_sk[0] :', source_image_sk[0].shape)
 
-    source_image_cv2 = resize_image(opt.source_image)
-    print(source_image_cv2.shape)
+    # source_image_cv2 = resize_image(opt.source_image)
+    # print(source_image_cv2.shape)
+
+    source_video = process_video(opt.source_video)
+
     # plt.imshow(source_image_cv2[0:256, 0:256, 0])
     # plt.show()
 
@@ -183,12 +345,12 @@ if __name__ == "__main__":
     # print(np.array(img).shape)
 
     # source_image = source_image_sk
-    source_image = source_image_cv2
+    # source_image = source_image_cv2
 
 
 
 
-    print('reading video...')
+    print('reading driving...')
     # reader = imageio.get_reader(opt.driving_video)
     # fps = reader.get_meta_data()['fps']
     # driving_video = []
@@ -214,12 +376,15 @@ if __name__ == "__main__":
 
 
     driving_video = process_video(opt.driving_video)
+
+
     print('params:')
     print('n: ', int(opt.n))
     print('n: ', opt.open_mouth)
     print()
 
-    list_of_best_frames = find_n_best_frames(source_image, driving_video, cpu=opt.cpu, n=int(opt.n), mouth = opt.open_mouth)
+    # list_of_best_frames = find_n_best_frames(source_image, driving_video, cpu=opt.cpu, n=int(opt.n), mouth = opt.open_mouth)
+    list_of_best_frames = find_n_best_frames_in_source_video(source_video, driving_video, n=int(opt.n), mouth = opt.open_mouth)
     if list_of_best_frames is None:
         print('BEST FRAME NOT FOUND')
         i = 0
