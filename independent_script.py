@@ -87,7 +87,7 @@ def find_n_best_frames_in_source_video(source, driving, n=1, mouth=0):
     # import face_alignment
 
     print('CREATING eye_checker entity...')
-    eye_checker = Eye_Checker(r'eyes\data\model_weights.pkl')
+    eye_checker = Eye_Checker('eyes\data\model_weights.pkl')
     print('=== eye_checker created ===')
     
     def normalize_kp(kp):
