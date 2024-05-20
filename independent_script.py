@@ -241,10 +241,10 @@ def resize_image(image_path, target_size=(256, 256)):
     image = cv2.imread(image_path)
     
     # Изменение размера изображения
-    resized_image = cv2.resize(image, target_size)
+    # resized_image = cv2.resize(image, target_size)
     
     # Преобразование изображения в формат numpy array
-    image_array = np.array(resized_image)
+    image_array = np.array(image)
     
     return image_array
 
@@ -265,10 +265,10 @@ def process_video(video_path, target_size=(256, 256)):
             break
         
         # Изменение размера кадра
-        resized_frame = cv2.resize(frame, target_size)
+        # resized_frame = cv2.resize(frame, target_size)
         
         # Преобразование кадра в формат numpy array и добавление в список
-        frames.append(np.array(resized_frame))
+        frames.append(np.array(frame))
         
     cap.release()
     
@@ -389,7 +389,7 @@ if __name__ == "__main__":
         print('BEST FRAME NOT FOUND')
         i = 0
     else:
-        i = list_of_best_frames[-1]
+        i = list_of_best_frames[0]
         print('LIST OF BEST FRAMES:  ') 
         print(*list_of_best_frames)
     print ("Best frame: " + str(i))
