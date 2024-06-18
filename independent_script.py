@@ -6,6 +6,8 @@ from tqdm import tqdm
 from scipy.spatial import ConvexHull
 from eyes import Eye_Checker
 import cv2
+from moviepy.editor import VideoFileClip
+import ffmpeg
 
 
 def find_n_best_frames(source, driving, n=1, cpu=False, mouth=0):
@@ -111,9 +113,12 @@ def find_n_best_frames_in_source_video(source, driving, n=1, mouth=0):
         eye_score = eye_checker.check_eye(image)
         mouth_status = eye_checker.check_mouth(image)
         
+        
+        kp_source_bad = eye_checker.get_kp(image)
+        if kp_source_bad is None:
+            continue
         source_candidates_bad.append(i)
         source_scores_bad.append([eye_score])
-        kp_source_bad = eye_checker.get_kp(image)
         kp_source_bad = normalize_kp(kp_source_bad)
         source_kps_bad.append(kp_source_bad)
 
@@ -127,23 +132,28 @@ def find_n_best_frames_in_source_video(source, driving, n=1, mouth=0):
                     # kp_driving = eye_checker.get_kp(image)
                     # kp_driving = normalize_kp(kp_driving)
                    
-                    source_candidates.append(i)
-                    source_scores.append([eye_score, mouth_status])
+                    
 
                     kp_source = eye_checker.get_kp(image)
+                    if kp_source is None:
+                        continue
                     kp_source = normalize_kp(kp_source)
                     source_kps.append(kp_source)
+                    source_candidates.append(i)
+                    source_scores.append([eye_score, mouth_status])
 
 
                 elif mouth_status< 0.79 and mouth==2: #THRESHOLD
                     # kp_driving = eye_checker.get_kp(image)
                     # kp_driving = normalize_kp(kp_driving)
                    
-                    source_candidates.append(i)
-                    source_scores.append([eye_score, mouth_status])
                     kp_source = eye_checker.get_kp(image)
+                    if kp_source is None:
+                        continue
                     kp_source = normalize_kp(kp_source)
                     source_kps.append(kp_source)
+                    source_candidates.append(i)
+                    source_scores.append([eye_score, mouth_status])
 
                     
         
@@ -153,11 +163,13 @@ def find_n_best_frames_in_source_video(source, driving, n=1, mouth=0):
                 # kp_driving = eye_checker.get_kp(image)
                 # kp_driving = normalize_kp(kp_driving)
                 
-                source_candidates.append(i)
-                source_scores.append([eye_score])
                 kp_source = eye_checker.get_kp(image)
+                if kp_source is None:
+                    continue
                 kp_source = normalize_kp(kp_source)
                 source_kps.append(kp_source)
+                source_candidates.append(i)
+                source_scores.append([eye_score, mouth_status])
 
                 
        
@@ -185,11 +197,14 @@ def find_n_best_frames_in_source_video(source, driving, n=1, mouth=0):
         eye_score = eye_checker.check_eye(image)
         mouth_status = eye_checker.check_mouth(image)
 
-        driving_candidates_bad.append(i)
-        driving_scores_bad.append([eye_score])
+        
         kp_driving_bad = eye_checker.get_kp(image)
+        if kp_driving_bad is None:
+            continue
         kp_driving_bad = normalize_kp(kp_driving_bad)
         driving_kps_bad.append(kp_driving_bad)
+        driving_candidates_bad.append(i)
+        driving_scores_bad.append([eye_score])
         # print(f'eye score {i}/{len(driving)} . . . {eye_score} ')
         if eye_score > 0.5:
             if mouth != 0:
@@ -201,24 +216,28 @@ def find_n_best_frames_in_source_video(source, driving, n=1, mouth=0):
                     # kp_driving = eye_checker.get_kp(image)
                     # kp_driving = normalize_kp(kp_driving)
                    
-                    driving_candidates.append(i)
-                    driving_scores.append([eye_score, mouth_status])
+                    
 
                     kp_driving = eye_checker.get_kp(image)
+                    if kp_driving is None:
+                        continue
                     kp_driving = normalize_kp(kp_driving)
                     driving_kps.append(kp_driving)
+                    driving_candidates.append(i)
+                    driving_scores.append([eye_score, mouth_status])
 
 
                 elif mouth_status< 0.79 and mouth==2: #THRESHOLD
                     # kp_driving = eye_checker.get_kp(image)
                     # kp_driving = normalize_kp(kp_driving)
                    
-                    driving_candidates.append(i)
-                    driving_scores.append([eye_score, mouth_status])
-
                     kp_driving = eye_checker.get_kp(image)
+                    if kp_driving is None:
+                        continue
                     kp_driving = normalize_kp(kp_driving)
                     driving_kps.append(kp_driving)
+                    driving_candidates.append(i)
+                    driving_scores.append([eye_score, mouth_status])
 
 
 
@@ -226,12 +245,13 @@ def find_n_best_frames_in_source_video(source, driving, n=1, mouth=0):
                 # kp_driving = eye_checker.get_kp(image)
                 # kp_driving = normalize_kp(kp_driving)
                 
-                driving_candidates.append(i)
-                driving_scores.append([eye_score])
-
                 kp_driving = eye_checker.get_kp(image)
+                if kp_driving is None:
+                    continue
                 kp_driving = normalize_kp(kp_driving)
                 driving_kps.append(kp_driving)
+                driving_candidates.append(i)
+                driving_scores.append([eye_score, mouth_status])
 
 
 
@@ -315,61 +335,109 @@ def resize_image(image_path, target_size=(256, 256)):
 
 
 
-
-'''
-
+#### CV2
 
 
-# def process_video(video_path, target_size=(256, 256)):
-#     # Загрузка видео
-#     cap = cv2.VideoCapture(video_path)
-#     frames = []
-    
-#     if not cap.isOpened():
-#         print(f"{'ERROR '*10} : {video_path}")
-#         return frames
-#     # Чтение и обработка каждого кадра
-#     while True:
-#         ret, frame = cap.read()
-#         if not ret:
-#             break
-        
-#         if cv2.waitKey(1) & 0xFF == ord('q'):
-#             break
-#         # Изменение размера кадра
-#         # resized_frame = cv2.resize(frame, target_size)
-        
-#         # Преобразование кадра в формат numpy array и добавление в список
-#         frames.append(np.array(frame))
-        
-#     cap.release()
-#     cv2.destroyAllWindows()
-#     print(f'{os.path.basename(video_path)} . . . done!')
-#     return frames
-
-'''
 
 
 def process_video(video_path, target_size=(256, 256)):
     # Загрузка видео
-    try:
-        reader = imageio.get_reader(video_path)
-    except FileNotFoundError:
-        print(f"{'ERROR '*10} : {video_path}")
-        return []
-
+    print("file exists?", os.path.exists(video_path))
+    cap = cv2.VideoCapture(video_path)
     frames = []
-    for frame in reader:
+    
+    if not cap.isOpened():
+        print(f"{'ERROR '*10} : {video_path}")
+        return frames
+    # Чтение и обработка каждого кадра
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            break
+        
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
         # Изменение размера кадра
         # resized_frame = cv2.resize(frame, target_size)
         
         # Преобразование кадра в формат numpy array и добавление в список
         frames.append(np.array(frame))
         
+    cap.release()
+    cv2.destroyAllWindows()
     print(f'{os.path.basename(video_path)} . . . done!')
     return frames
 
 
+
+#### imageio
+'''
+# def process_video(video_path, target_size=(256, 256)):
+#     # Загрузка видео
+#     try:
+#         reader = imageio.get_reader(video_path)
+#     except FileNotFoundError:
+#         print(f"{'ERROR '*10} : {video_path}")
+#         return []
+
+#     frames = []
+#     for frame in reader:
+#         # Изменение размера кадра
+#         # resized_frame = cv2.resize(frame, target_size)
+        
+#         # Преобразование кадра в формат numpy array и добавление в список
+#         frames.append(np.array(frame))
+        
+#     print(f'{os.path.basename(video_path)} . . . done!')
+#     return frames
+
+
+### MOVIEPY
+# def process_video(video_path, target_size=(256, 256)):
+#     # Загрузка видео
+#     try:
+#         clip = VideoFileClip(video_path)
+#     except OSError:
+#         print(f"{'ERROR '*10} : {video_path}")
+#         return []
+
+#     frames = []
+#     for frame in clip.iter_frames():
+#         frame = np.array(frame)
+#         # Изменение размера кадра (если нужно)
+#         # frame = cv2.resize(frame, target_size)
+#         frames.append(frame)
+
+#     print(f'{os.path.basename(video_path)} . . . done! Processed {len(frames)} frames.')
+#     return frames
+'''
+
+### FFMPEG
+'''
+def process_video(video_path, target_size=(256, 256)):
+    try:
+        probe = ffmpeg.probe(video_path)
+    except:
+        print(f"{'ERROR '*10} : {video_path}")
+        return []
+
+    video_info = next(stream for stream in probe['streams'] if stream['codec_type'] == 'video')
+    width = int(video_info['width'])
+    height = int(video_info['height'])
+
+    out, _ = (
+        ffmpeg
+        .input(video_path)
+        .output('pipe:', format='rawvideo', pix_fmt='rgb24')
+        .run(capture_stdout=True, capture_stderr=True)
+    )
+
+    video = np.frombuffer(out, np.uint8).reshape([-1, height, width, 3])
+    frames = [frame for frame in video]
+
+    print(f'{os.path.basename(video_path)} . . . done! Processed {len(frames)} frames.')
+    return frames
+'''
 
 if __name__ == "__main__":
     parser = ArgumentParser()
@@ -434,9 +502,14 @@ if __name__ == "__main__":
         print(*list_of_best_frames)
     print ("Best frame: " + str(i))
     print('saving to txt . . .', end = '')
-    with open(f'best_frames_{os.path.basename(opt.source_video)[0]}_{os.path.basename(opt.driving_video)[0]}.txt', 'w') as file:
+
+    if not os.path.exists("best_frames"): 
+      
+     
+        os.makedirs("best_frames")
+    with open(f'best_frames/best_frames_{os.path.basename(opt.source_video).split(".")[0]}_{os.path.basename(opt.driving_video).split(".")[0]}.txt', 'w') as file:
         for el in list_of_best_frames:
-            file.write(str(el))
+            file.write(str(el)+'\n')
     print(' OK')
     
     
